@@ -1,0 +1,29 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+ENV['VAGRANT_SERVER_URL'] = 'https://vagrant.elab.pro'
+Vagrant.configure("2") do |config|
+
+  config.vm.box_check_update = false
+  config.vm.provider "virtualbox" do |vb|
+    vb.memory = 4096
+    vb.cpus = 2
+  end
+
+  config.vm.define "balancer" do |host|
+    host.vm.hostname = "balancer"
+    host.vm.box = "ubuntu/jammy64"
+    host.vm.network "private_network", ip: "192.168.56.24"
+    host.vm.provision "shell", inline: <<-SHELL
+      # Install all updates and Ansible
+      add-apt-repository -y ppa:ansible/ansible
+      apt update
+      apt upgrade -y
+      apt install -y ansible
+
+      # Enable SSH password authentication (Ubuntu 22.04 has restricted this by default)
+      sed -i 's/^PasswordAuthentication .*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+      systemctl restart sshd.service
+    SHELL
+  end
+end

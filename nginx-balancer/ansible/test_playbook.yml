@@ -1,0 +1,6 @@
+---
+- hosts: balancer
+  become: true
+  roles:
+    - ansible_install_nginx
+...

@@ -1,0 +1,24 @@
+events {
+    worker_connections 1024;
+}
+http {
+   upstream app {
+      server {{ hostvars['nginx_1'].ansible_ssh_host }};
+      server {{ hostvars['nginx_2'].ansible_ssh_host }};
+      server {{ hostvars['nginx_3'].ansible_ssh_host }};
+   }
+
+   server {
+      listen 80;
+
+      server_name {{ domain }};
+
+      location / {
+         proxy_pass http://app;
+         proxy_set_header Host $host;
+         proxy_set_header X-Real-IP $remote_addr;
+         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+         proxy_set_header X-Forwarded-Proto $scheme;
+      }
+   }
+}

@@ -1,0 +1,38 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+# добавить нумерацию в /var/www/html/index.nginx-debian.html для каждой ноды
+
+Vagrant.configure("2") do |config|
+  config.vm.box = "ubuntu/jammy64"
+  config.vm.box_check_update = false
+
+  config.vm.provider "virtualbox" do |vb|
+    vb.memory = "1024"
+  end
+
+  NODES = 3
+
+  def create_host(config, host_ip, hostname)
+    config.vm.network "private_network", ip: host_ip
+    config.vm.define hostname do |host|
+      host.vm.hostname = hostname
+      host.vm.provider "virtualbox" do |vb|
+        vb.name = hostname
+      end
+      host.vm.provision "shell", inline: <<-SHELL
+        apt update
+        apt upgrade -y
+        apt install -y nginx
+
+        sed -i 's/^PasswordAuthentication .*/PasswordAuthentication yes/' /etc/ssh/sshd_config
+        systemctl restart sshd.service
+      SHELL
+    end
+  end
+
+  (1..NODES).each do |machine_id|
+    host_ip = 20 + machine_id
+    create_host(config, "192.168.56.#{host_ip}", "nginx-#{machine_id}")
+  end
+end
