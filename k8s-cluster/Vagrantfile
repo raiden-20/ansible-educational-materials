@@ -1,0 +1,25 @@
+# -*- mode: ruby -*-
+# vi: set ft=ruby :
+
+ENV['VAGRANT_SERVER_URL'] = 'https://vagrant.elab.pro'
+Vagrant.configure("2") do |config|
+
+  config.vm.box_check_update = false
+  config.vm.provider "virtualbox" do |vb|
+    vb.memory = 4096
+    vb.cpus = 4
+  end
+
+  # Node with ansible
+  config.vm.define "vagrant-cluster" do |host|
+    host.vm.hostname = "vagrant-cluster"
+    host.vm.box = "ubuntu/jammy64"
+    host.vm.synced_folder "./ansible","/home/vagrant/ansible"
+    host.vm.network "private_network", ip: "192.168.56.18"
+  end
+
+  config.vm.provision 'ansible_local' do |ansible|
+    ansible.playbook = '/home/vagrant/ansible/create_k8s.yml'
+    ansible.verbose = 'v'
+  end
+end

@@ -1,0 +1,84 @@
+- name: Get containerd tar.gz
+  ansible.builtin.get_url:
+    url: https://github.com/containerd/containerd/releases/download/v1.7.0/containerd-1.7.0-linux-amd64.tar.gz
+    dest: /tmp
+    mode: '0777'
+
+- name: Extract containerd.tar.gz into /usr/local
+  ansible.builtin.unarchive:
+    src: /tmp/containerd-1.7.0-linux-amd64.tar.gz
+    remote_src: true
+    dest: /usr/local
+
+- name: Remove containerd.tar.gz
+  ansible.builtin.file:
+    path: /tmp/containerd-1.7.0-linux-amd64.tar.gz
+    state: absent
+
+- name: Create a /etc/containerd directory if it does not exist
+  ansible.builtin.file:
+    path: /etc/containerd
+    state: directory
+    mode: '0755'
+
+- name: Create default containerd config
+  shell: containerd config default > /etc/containerd/config.toml
+
+- name: Replacement in file /etc/containerd/config.toml
+  ansible.builtin.replace:
+    path: /etc/containerd/config.toml
+    regexp: 'SystemdCgroup \= false'
+    replace: 'SystemdCgroup = true'
+
+- name: Get containerd service
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/containerd/containerd/main/containerd.service
+    dest: /etc/systemd/system/
+    mode: '0777'
+
+- name: Get runc
+  ansible.builtin.get_url:
+    url: https://github.com/opencontainers/runc/releases/download/v1.1.4/runc.amd64
+    dest: /tmp
+    mode: '0777'
+
+- name: Install runc
+  shell: install -m 755 /tmp/runc.amd64 /usr/local/sbin/runc
+
+- name: Remove runc install file
+  ansible.builtin.file:
+    path: /tmp/runc.amd64
+    state: absent
+
+- name: Get container networking plugin install file
+  ansible.builtin.get_url:
+    url: https://github.com/containernetworking/plugins/releases/download/v1.2.0/cni-plugins-linux-amd64-v1.2.0.tgz
+    dest: /tmp
+    mode: '0777'
+
+- name: Create a /opt/cni/bin directory if it does not exist
+  ansible.builtin.file:
+    path: /opt/cni/bin
+    state: directory
+    mode: '0755'
+
+- name: Extract container networking plugin into /opt/cni/bin
+  ansible.builtin.unarchive:
+    src: /tmp/cni-plugins-linux-amd64-v1.2.0.tgz
+    remote_src: true
+    dest: /opt/cni/bin
+
+- name: Remove container networking plugin install file
+  ansible.builtin.file:
+    path: /tmp/cni-plugins-linux-amd64-v1.2.0.tgz
+    state: absent
+
+- name: Systemctl daemon-reload
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+
+- name: Start containerd
+  ansible.builtin.systemd_service:
+    name: containerd
+    state: started
+    enabled: true
